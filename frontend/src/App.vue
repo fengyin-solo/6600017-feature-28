@@ -23,9 +23,40 @@
           class="w-full bg-gray-800 rounded px-3 py-2 text-sm" />
       </div>
 
-      <!-- Location -->
+      <!-- Location Presets -->
       <div>
-        <label class="text-gray-400 text-xs">纬度: {{ store.latitude.toFixed(1) }}°</label>
+        <label class="text-gray-400 text-xs">
+          纬度: {{ store.latitude.toFixed(1) }}°
+          <span v-if="activePreset" class="text-blue-400 ml-1">· {{ activePreset }}</span>
+        </label>
+        <div class="mt-1 mb-1">
+          <div class="text-gray-500 text-xs mb-0.5">北半球</div>
+          <div class="flex flex-wrap gap-1">
+            <button v-for="loc in northernLocations" :key="loc.name"
+              @click="applyPreset(loc)"
+              :class="[
+                'px-2 py-0.5 rounded text-xs transition-colors',
+                Math.abs(loc.latitude - store.latitude) < 0.05
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ]">
+              {{ loc.name }}
+            </button>
+          </div>
+          <div class="text-gray-500 text-xs mb-0.5 mt-2">南半球</div>
+          <div class="flex flex-wrap gap-1">
+            <button v-for="loc in southernLocations" :key="loc.name"
+              @click="applyPreset(loc)"
+              :class="[
+                'px-2 py-0.5 rounded text-xs transition-colors',
+                Math.abs(loc.latitude - store.latitude) < 0.05
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ]">
+              {{ loc.name }}
+            </button>
+          </div>
+        </div>
         <input type="range" v-model.number="store.latitude" min="-90" max="90" step="0.1" class="w-full" />
       </div>
 
@@ -80,11 +111,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSkyStore } from './store/sky'
 import StarCanvas from './components/StarCanvas.vue'
 
 const store = useSkyStore()
 const dateStr = ref(new Date().toISOString().slice(0, 16))
 function updateDate() { store.viewDate = new Date(dateStr.value) }
+
+interface LocationPreset {
+  name: string
+  latitude: number
+}
+
+const northernLocations: LocationPreset[] = [
+  { name: '北京', latitude: 39.9 },
+  { name: '东京', latitude: 35.7 },
+  { name: '纽约', latitude: 40.7 },
+  { name: '伦敦', latitude: 51.5 },
+  { name: '莫斯科', latitude: 55.8 },
+  { name: '开罗', latitude: 30.0 },
+  { name: '赤道', latitude: 0.0 },
+]
+
+const southernLocations: LocationPreset[] = [
+  { name: '悉尼', latitude: -33.9 },
+  { name: '墨尔本', latitude: -37.8 },
+  { name: '惠灵顿', latitude: -41.3 },
+  { name: '圣保罗', latitude: -23.5 },
+  { name: '布宜诺斯艾利斯', latitude: -34.6 },
+  { name: '开普敦', latitude: -33.9 },
+]
+
+const allPresets = computed(() => [...northernLocations, ...southernLocations])
+
+const activePreset = computed(() => {
+  const match = allPresets.value.find(p => Math.abs(p.latitude - store.latitude) < 0.05)
+  return match?.name ?? ''
+})
+
+function applyPreset(preset: LocationPreset) {
+  store.latitude = preset.latitude
+}
 </script>
