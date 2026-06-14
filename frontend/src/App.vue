@@ -27,7 +27,7 @@
       <div>
         <label class="text-gray-400 text-xs">
           纬度: {{ store.latitude.toFixed(1) }}°
-          <span v-if="activePreset" class="text-blue-400 ml-1">· {{ activePreset }}</span>
+          <span v-if="presetLabel" class="text-blue-400 ml-1">· {{ presetLabel }}</span>
         </label>
         <div class="mt-1 mb-1">
           <div class="text-gray-500 text-xs mb-0.5">北半球</div>
@@ -36,7 +36,7 @@
               @click="applyPreset(loc)"
               :class="[
                 'px-2 py-0.5 rounded text-xs transition-colors',
-                Math.abs(loc.latitude - store.latitude) < 0.05
+                isPresetActive(loc)
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
               ]">
@@ -49,7 +49,7 @@
               @click="applyPreset(loc)"
               :class="[
                 'px-2 py-0.5 rounded text-xs transition-colors',
-                Math.abs(loc.latitude - store.latitude) < 0.05
+                isPresetActive(loc)
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
               ]">
@@ -57,7 +57,7 @@
             </button>
           </div>
         </div>
-        <input type="range" v-model.number="store.latitude" min="-90" max="90" step="0.1" class="w-full" />
+        <input type="range" :value="store.latitude" @input="onLatitudeInput" min="-90" max="90" step="0.1" class="w-full" />
       </div>
 
       <!-- Zoom -->
@@ -145,12 +145,36 @@ const southernLocations: LocationPreset[] = [
 
 const allPresets = computed(() => [...northernLocations, ...southernLocations])
 
-const activePreset = computed(() => {
-  const match = allPresets.value.find(p => Math.abs(p.latitude - store.latitude) < 0.05)
-  return match?.name ?? ''
+const selectedPresetName = ref('北京')
+
+const presetLabel = computed(() => {
+  if (!selectedPresetName.value) return ''
+  const preset = allPresets.value.find(p => p.name === selectedPresetName.value)
+  if (!preset) return ''
+  if (Math.abs(store.latitude - preset.latitude) < 0.05) return preset.name
+  return `${preset.name} ±${Math.abs(store.latitude - preset.latitude).toFixed(1)}°`
 })
+
+function isPresetActive(preset: LocationPreset): boolean {
+  if (selectedPresetName.value !== preset.name) return false
+  return Math.abs(store.latitude - preset.latitude) <= 5
+}
 
 function applyPreset(preset: LocationPreset) {
   store.latitude = preset.latitude
+  selectedPresetName.value = preset.name
+}
+
+function onLatitudeInput(e: Event) {
+  const val = parseFloat((e.target as HTMLInputElement).value)
+  if (!isNaN(val)) {
+    store.latitude = Math.max(-90, Math.min(90, val))
+  }
+  if (selectedPresetName.value) {
+    const preset = allPresets.value.find(p => p.name === selectedPresetName.value)
+    if (preset && Math.abs(store.latitude - preset.latitude) > 5) {
+      selectedPresetName.value = ''
+    }
+  }
 }
 </script>
